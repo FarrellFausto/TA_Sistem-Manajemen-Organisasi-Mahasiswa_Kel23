@@ -5,7 +5,7 @@
 -- Branch: feat-database-schema
 -- ============================================================
 
-USE db_organisasi_mahasiswa;
+USE db_organisasi_ta_prak_sbd;
 
 -- 1. Tabel periode
 CREATE TABLE periode (
@@ -52,6 +52,7 @@ CREATE TABLE anggota (
   id_bidang      INT           NULL,
   id_periode     INT           NOT NULL,
   status_anggota ENUM('aktif','tidak aktif','alumni') NOT NULL DEFAULT 'aktif',
+  deleted_at     DATETIME NULL DEFAULT NULL,
   PRIMARY KEY (id_anggota),
   UNIQUE KEY uq_nim (nim),
   CONSTRAINT fk_anggota_jabatan
