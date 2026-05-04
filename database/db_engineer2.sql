@@ -6,7 +6,7 @@
 -- ⚠️ Jalankan SETELAH db_engineer1.sql berhasil di-merge
 -- ============================================================
 
-USE db_organisasi_mahasiswa;
+USE db_organisasi_ta_prak_sbd;
 
 -- 5. Tabel proker
 CREATE TABLE proker (
@@ -63,14 +63,14 @@ CREATE TABLE users (
 -- 8. Tabel log_aktivitas
 CREATE TABLE log_aktivitas (
   id_log     INT         NOT NULL AUTO_INCREMENT,
-  id_user    INT         NOT NULL,
+  id_user    INT         NULL,
   aksi       TEXT        NOT NULL,
   waktu      TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
   ip_address VARCHAR(45) NULL,
   PRIMARY KEY (id_log),
   CONSTRAINT fk_log_user
     FOREIGN KEY (id_user) REFERENCES users (id_user)
-    ON UPDATE CASCADE ON DELETE RESTRICT
+    ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
@@ -97,11 +97,11 @@ INSERT INTO anggota_proker (id_anggota, id_proker, peran) VALUES
 
 -- Users (5 data)
 INSERT INTO users (username, password, role, id_anggota) VALUES
-('superadmin',  '$2b$12$examplehashSuperAdmin001',  'superadmin', NULL),
-('rizky_admin', '$2b$12$examplehashRizky00123456',  'admin',      1),
-('budi_admin',  '$2b$12$examplehashBudi001234567',  'admin',      3),
-('ahmad_admin', '$2b$12$examplehashAhmad01234567',  'admin',      4),
-('viewer1',     '$2b$12$examplehashViewer01234567', 'viewer',     5);
+('superadmin',  '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',  'superadmin', NULL),
+('rizky_admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',  'admin',      1),
+('budi_admin',  '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',  'admin',      3),
+('ahmad_admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',  'admin',      4),
+('viewer1',     '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',  'viewer',     5);
 
 -- Log Aktivitas (5 data)
 INSERT INTO log_aktivitas (id_user, aksi, waktu, ip_address) VALUES
