@@ -24,7 +24,13 @@ if (isset($_POST['update'])) {
     if (!empty($id_proker)) {
         mysqli_query($conn, "INSERT INTO tugas_proker (id_anggota, id_proker) VALUES ($id, $id_proker)");
     }
-
+// --- AUDIT LOG ---
+    $user_log = $_SESSION['username'] ?? 'Admin';
+    $aksi = "Edit Anggota";
+    $ket = "Mengubah data anggota bernama: $nama";
+    $stmt_log = mysqli_prepare($conn, "INSERT INTO audit_log (username, aktivitas, keterangan) VALUES (?, ?, ?)");
+    mysqli_stmt_bind_param($stmt_log, "sss", $user_log, $aksi, $ket);
+    mysqli_stmt_execute($stmt_log);
     echo "<script>alert('Data Berhasil Diupdate!'); window.location='anggota_tampil.php';</script>";
 }
 ?>
