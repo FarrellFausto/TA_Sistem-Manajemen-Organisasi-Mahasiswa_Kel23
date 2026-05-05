@@ -1,5 +1,5 @@
 <?php
-include 'config/koneksi.php';
+include '../config/koneksi.php';
 session_start();
 
 if (!isset($_SESSION['role'])) {
@@ -36,7 +36,7 @@ $res_periode = mysqli_query($conn, "SELECT * FROM periode ORDER BY tahun_mulai D
     <title>Data Anggota</title>
 </head>
 <body style="font-family: sans-serif; background: #f8f9fa; margin: 0;">
-    <?php include 'includes/navbar.php'; ?>
+    <?php include '../includes/navbar.php'; ?>
     
     <div style="padding: 30px; max-width: 1200px; margin: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">

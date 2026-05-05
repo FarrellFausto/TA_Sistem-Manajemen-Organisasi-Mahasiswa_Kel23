@@ -1,5 +1,5 @@
 <?php
-include 'config/koneksi.php';
+include '../config/koneksi.php';
 session_start();
 if ($_SESSION['role'] != 'Admin') die("Hanya Admin yang bisa edit data!");
 
@@ -33,7 +33,7 @@ if (isset($_POST['update'])) {
 <html>
 <head><title>Edit Anggota</title></head>
 <body style="font-family: sans-serif; background: #f8f9fa; margin: 0;">
-    <?php include 'includes/navbar.php'; ?>
+    <?php include '../includes/navbar.php'; ?>
     <div style="max-width: 600px; margin: 50px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
         <h2 style="color: #2c3e50; text-align: center;">Edit Data Anggota</h2>
         <form method="POST">
