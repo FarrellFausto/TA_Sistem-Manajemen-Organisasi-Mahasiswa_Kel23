@@ -1,46 +1,49 @@
 <?php
-include '../config/koneksi.php';
-session_start();
+session_start(); 
+include 'config/koneksi.php';
 
-// Proteksi Halaman: Pastikan hanya Admin yang bisa akses
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'Admin') {
-    header("Location: login.php");
+if (!isset($_SESSION['role']) || $_SESSION['role'] == 'viewer') {
+    header("Location: login.php?pesan=restricted");
     exit();
 }
 
 if (isset($_POST['tambah'])) {
-    $nama = mysqli_real_escape_string($conn, $_POST['nama_lengkap']);
-    $nim = mysqli_real_escape_string($conn, $_POST['nim']);
-    $username = mysqli_real_escape_string($conn, $_POST['username']);
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-    $id_bidang = $_POST['id_bidang'];
-    $id_jabatan = $_POST['id_jabatan'];
-    $id_proker = $_POST['id_proker'];
+    $nim           = $_POST['nim'];
+    $nama          = $_POST['nama_lengkap'];
+    $id_jabatan    = $_POST['id_jabatan'];
+    $id_bidang     = $_POST['id_bidang'];
+    $id_periode    = $_POST['id_periode'];
+    $jenis_kelamin = $_POST['jenis_kelamin'];
+    $tanggal_lahir = $_POST['tanggal_lahir'];
+    $email         = $_POST['email'];
+    $no_hp         = $_POST['no_hp'];
+    $prodi         = $_POST['prodi'];
+    $fakultas      = $_POST['fakultas'];
+    $angkatan      = $_POST['angkatan'];
 
-    // 1. Insert ke Tabel Users (Role otomatis Anggota)
-    $query_user = "INSERT INTO users (username, password, role) VALUES ('$username', '$password', 'Anggota')";
-    if (mysqli_query($conn, $query_user)) {
-        $id_u = mysqli_insert_id($conn);
-
-        // 2. Insert ke Tabel Anggota
-        $query_anggota = "INSERT INTO anggota (id_user, id_bidang, id_jabatan, nama_lengkap, nim, periode) 
-                          VALUES ($id_u, $id_bidang, $id_jabatan, '$nama', '$nim', '2025/2026')";
-        mysqli_query($conn, $query_anggota);
-        $id_a = mysqli_insert_id($conn);
-
-        // 3. Insert ke Tabel Tugas Proker (Jika memilih proker)
-        if (!empty($id_proker)) {
-            $query_tp = "INSERT INTO tugas_proker (id_anggota, id_proker) VALUES ($id_a, $id_proker)";
-            mysqli_query($conn, $query_tp);
-        }
-
-        // Alert sukses dan redirect balik ke tampil data (Tanpa Logout/Relog)
-        echo "<script>
-                alert('Data Anggota Berhasil Ditambahkan bray!');
-                window.location='anggota_tampil.php';
-              </script>";
+    $check = $conn->prepare("SELECT nim FROM anggota WHERE nim = ?");
+    $check->bind_param("s", $nim);
+    $check->execute();
+    
+    if ($check->get_result()->num_rows > 0) {
+        echo "<script>alert('Error: NIM $nim sudah terdaftar!'); window.history.back();</script>";
+        exit();
     } else {
-        echo "<script>alert('Gagal menambah data: " . mysqli_error($conn) . "');</script>";
+        $sql = "INSERT INTO anggota 
+                (nim, nama_lengkap, jenis_kelamin, tanggal_lahir, email, no_hp, prodi, fakultas, angkatan, id_jabatan, id_bidang, id_periode) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssssssssiiii", 
+            $nim, $nama, $jenis_kelamin, $tanggal_lahir, $email, 
+            $no_hp, $prodi, $fakultas, $angkatan, $id_jabatan, 
+            $id_bidang, $id_periode
+        );
+        
+        if ($stmt->execute()) {
+            header("Location: anggota_tampil.php?status=sukses");
+            exit(); 
+        }
     }
 }
 ?>
