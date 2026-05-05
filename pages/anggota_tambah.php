@@ -3,7 +3,7 @@ include '../config/koneksi.php';
 session_start();
 
 // Proteksi Halaman: Pastikan hanya Admin yang bisa akses
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'Admin') {
+if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     header("Location: login.php");
     exit();
 }
@@ -33,7 +33,14 @@ if (isset($_POST['tambah'])) {
             $query_tp = "INSERT INTO tugas_proker (id_anggota, id_proker) VALUES ($id_a, $id_proker)";
             mysqli_query($conn, $query_tp);
         }
-
+// --- AUDIT LOG ---
+        $user_log = $_SESSION['username'] ?? 'admin';
+        $aksi = "Tambah Anggota";
+        $ket = "Menambah anggota dengan NIM: $nim";
+        $stmt_log = mysqli_prepare($conn, "INSERT INTO audit_log (username, aktivitas, keterangan) VALUES (?, ?, ?)");
+        mysqli_stmt_bind_param($stmt_log, "sss", $user_log, $aksi, $ket);
+        mysqli_stmt_execute($stmt_log);
+        
         // Alert sukses dan redirect balik ke tampil data (Tanpa Logout/Relog)
         echo "<script>
                 alert('Data Anggota Berhasil Ditambahkan bray!');
