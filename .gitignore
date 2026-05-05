@@ -1,0 +1,10 @@
+# Database config
+config/database.php
+
+# Editor junk
+.vscode/
+.idea/
+
+# OS junk
+.DS_Store
+Thumbs.db
