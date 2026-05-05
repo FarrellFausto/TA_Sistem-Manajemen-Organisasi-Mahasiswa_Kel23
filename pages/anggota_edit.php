@@ -1,31 +1,48 @@
 <?php
-include '../config/koneksi.php';
 session_start();
-if ($_SESSION['role'] != 'Admin') die("Hanya Admin yang bisa edit data!");
+include 'config/koneksi.php';
 
-$id = $_GET['id'];
-// Ambil data lama
-$query_lama = mysqli_query($conn, "SELECT a.*, tp.id_proker FROM anggota a 
-                                   LEFT JOIN tugas_proker tp ON a.id_anggota = tp.id_anggota 
-                                   WHERE a.id_anggota = $id");
-$d = mysqli_fetch_assoc($query_lama);
+if (!isset($_SESSION['role']) || $_SESSION['role'] == 'viewer') {
+    header("Location: login.php?pesan=restricted");
+    exit();
+}
 
 if (isset($_POST['update'])) {
-    $nama = $_POST['nama_lengkap'];
-    $id_bidang = $_POST['id_bidang'];
-    $id_jabatan = $_POST['id_jabatan'];
-    $id_proker = $_POST['id_proker'];
+    $id_anggota    = $_POST['id_anggota'];
+    $nim           = $_POST['nim'];
+    $nama          = $_POST['nama_lengkap'];
+    $jenis_kelamin = $_POST['jenis_kelamin'];
+    $tanggal_lahir = $_POST['tanggal_lahir'];
+    $email         = $_POST['email'];
+    $no_hp         = $_POST['no_hp'];
+    $prodi         = $_POST['prodi'];
+    $fakultas      = $_POST['fakultas'];
+    $angkatan      = $_POST['angkatan'];
+    $id_jabatan    = $_POST['id_jabatan'];
+    $id_bidang     = $_POST['id_bidang'];
+    $id_periode    = $_POST['id_periode'];
+    $status        = $_POST['status_anggota'];
 
-    // Update tabel anggota
-    mysqli_query($conn, "UPDATE anggota SET nama_lengkap='$nama', id_bidang='$id_bidang', id_jabatan='$id_jabatan' WHERE id_anggota=$id");
+    $sql = "UPDATE anggota SET 
+            nim=?, nama_lengkap=?, jenis_kelamin=?, tanggal_lahir=?, 
+            email=?, no_hp=?, prodi=?, fakultas=?, angkatan=?, 
+            id_jabatan=?, id_bidang=?, id_periode=?, status_anggota=? 
+            WHERE id_anggota=?";
 
-    // Update tabel tugas_proker (Hapus lama, pasang baru)
-    mysqli_query($conn, "DELETE FROM tugas_proker WHERE id_anggota=$id");
-    if (!empty($id_proker)) {
-        mysqli_query($conn, "INSERT INTO tugas_proker (id_anggota, id_proker) VALUES ($id, $id_proker)");
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ssssssssiiiisi", 
+        $nim, $nama, $jenis_kelamin, $tanggal_lahir, 
+        $email, $no_hp, $prodi, $fakultas, $angkatan, 
+        $id_jabatan, $id_bidang, $id_periode, $status, 
+        $id_anggota
+    );
+
+    if ($stmt->execute()) {
+        header("Location: anggota_tampil.php?status=updated");
+        exit();
+    } else {
+        echo "Gagal memperbarui data: " . $conn->error;
     }
-
-    echo "<script>alert('Data Berhasil Diupdate!'); window.location='anggota_tampil.php';</script>";
 }
 ?>
 
