@@ -1,5 +1,5 @@
 <?php
-include 'config/koneksi.php';
+include '../config/koneksi.php';
 session_start();
 
 // Proteksi Halaman: Pastikan hanya Admin yang bisa akses
@@ -51,7 +51,7 @@ if (isset($_POST['tambah'])) {
     <title>Tambah Anggota - Admin Panel</title>
 </head>
 <body style="font-family: sans-serif; background: #f8f9fa; margin: 0;">
-    <?php include 'includes/navbar.php'; ?>
+    <?php include '../includes/navbar.php'; ?>
     
     <div style="max-width: 600px; margin: 30px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
         <h2 style="color: #27ae60; margin-top: 0;">Tambah Anggota Baru</h2>

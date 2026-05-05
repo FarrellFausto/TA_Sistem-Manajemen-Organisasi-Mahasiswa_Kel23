@@ -1,5 +1,5 @@
 <?php
-include 'config/koneksi.php';
+include '../config/koneksi.php';
 session_start();
 
 if (!isset($_SESSION['role'])) {
@@ -9,17 +9,25 @@ if (!isset($_SESSION['role'])) {
 
 $role_user = $_SESSION['role'];
 $search = isset($_GET['cari']) ? mysqli_real_escape_string($conn, $_GET['cari']) : "";
+$filter_periode = isset($_GET['periode']) ? (int)$_GET['periode'] : 0;
 
-// Query Data
-$query_aktif = "SELECT a.*, b.nama_bidang, j.nama_jabatan, p.nama_proker 
+$where_clause = "a.deleted_at IS NULL";
+if (!empty($search)) {
+    $where_clause .= " AND (a.nama_lengkap LIKE '%$search%' OR a.nim LIKE '%$search%')";
+}
+if ($filter_periode > 0) {
+    $where_clause .= " AND a.id_periode = $filter_periode";
+}
+
+$query_aktif = "SELECT a.*, b.nama_bidang, j.nama_jabatan, p.label as nama_periode
                 FROM anggota a
                 JOIN bidang b ON a.id_bidang = b.id_bidang
                 JOIN jabatan j ON a.id_jabatan = j.id_jabatan
-                LEFT JOIN tugas_proker tp ON a.id_anggota = tp.id_anggota
-                LEFT JOIN proker p ON tp.id_proker = p.id_proker
-                WHERE a.deleted_at IS NULL 
-                AND (a.nama_lengkap LIKE '%$search%' OR a.nim LIKE '%$search%')";
+                JOIN periode p ON a.id_periode = p.id_periode
+                WHERE $where_clause";
 $res_aktif = mysqli_query($conn, $query_aktif);
+
+$res_periode = mysqli_query($conn, "SELECT * FROM periode ORDER BY tahun_mulai DESC");
 ?>
 
 <!DOCTYPE html>
@@ -28,7 +36,7 @@ $res_aktif = mysqli_query($conn, $query_aktif);
     <title>Data Anggota</title>
 </head>
 <body style="font-family: sans-serif; background: #f8f9fa; margin: 0;">
-    <?php include 'includes/navbar.php'; ?>
+    <?php include '../includes/navbar.php'; ?>
     
     <div style="padding: 30px; max-width: 1200px; margin: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -38,6 +46,25 @@ $res_aktif = mysqli_query($conn, $query_aktif);
             <?php endif; ?>
         </div>
 
+        <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+            <form method="GET" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <label style="font-weight: bold; color: #2c3e50;">Filter Periode:</label>
+                <select name="periode" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; min-width: 150px;">
+                    <option value="">Semua Periode</option>
+                    <?php while($pr = mysqli_fetch_assoc($res_periode)): ?>
+                        <option value="<?= $pr['id_periode'] ?>" <?= ($filter_periode == $pr['id_periode']) ? 'selected' : '' ?>>
+                            <?= $pr['label'] ?>
+                        </option>
+                    <?php endwhile; ?>
+                </select>
+                <input type="text" name="cari" placeholder="Cari NIM/Nama..." value="<?= htmlspecialchars($search) ?>" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; width: 200px;">
+                <button type="submit" style="padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">Filter</button>
+                <?php if($filter_periode > 0 || !empty($search)): ?>
+                    <a href="anggota_tampil.php" style="padding: 8px 16px; color: #e74c3c; text-decoration: none;">Reset</a>
+                <?php endif; ?>
+            </form>
+        </div>
+
         <table style="width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
             <thead>
                 <tr style="background: #2c3e50; color: white; text-align: left;">
@@ -45,7 +72,7 @@ $res_aktif = mysqli_query($conn, $query_aktif);
                     <th style="padding: 15px;">Nama Lengkap</th>
                     <th style="padding: 15px;">Bidang</th>
                     <th style="padding: 15px;">Jabatan</th>
-                    <th style="padding: 15px;">Proker</th>
+                    <th style="padding: 15px;">Periode</th>
                     <?php if($role_user == 'Admin'): ?>
                         <th style="padding: 15px;">Aksi</th>
                     <?php endif; ?>
@@ -58,7 +85,7 @@ $res_aktif = mysqli_query($conn, $query_aktif);
                     <td style="padding: 15px;"><b><?= $row['nama_lengkap'] ?></b></td>
                     <td style="padding: 15px;"><?= $row['nama_bidang'] ?></td>
                     <td style="padding: 15px;"><?= $row['nama_jabatan'] ?></td>
-                    <td style="padding: 15px;"><?= $row['nama_proker'] ?? '-' ?></td>
+                    <td style="padding: 15px;"><span style="background: #e8f5e9; color: #2e7d32; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: bold;"><?= $row['nama_periode'] ?></span></td>
                     <?php if($role_user == 'Admin'): ?>
                     <td style="padding: 15px;">
                         <a href="anggota_edit.php?id=<?= $row['id_anggota'] ?>" style="color: #3498db; text-decoration: none;">Edit</a> | 
