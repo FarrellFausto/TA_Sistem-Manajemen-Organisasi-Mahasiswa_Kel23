@@ -65,7 +65,7 @@ if ($type === 'soft') {
 
     catat_log($conn, $ses_id_user, "admin $ses_username melakukan HARD DELETE: $nama (NIM: $nim, ID: $id) — DATA DIHAPUS PERMANEN");
 
-    tab_redirect('anggota_tampil.php', ['error' => "$nama dihapus permanen dari sistem."]);
+    tab_redirect('anggota_tampil.php', ['success' => "$nama berhasil dihapus permanen dari sistem."]);
 
 } else {
     tab_redirect('anggota_tampil.php', ['error' => 'Tipe operasi tidak dikenal.']);
