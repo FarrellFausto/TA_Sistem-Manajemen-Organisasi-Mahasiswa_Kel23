@@ -1,28 +1,141 @@
 <?php
-// Cek apakah session sudah jalan, kalau belum jalankan
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+// ============================================================
+// includes/navbar.php — Navbar dengan Tab-Aware Session
+// session.php sudah di-load via koneksi.php di halaman pemanggil
+// ============================================================
+
+$in_pages = (strpos($_SERVER['PHP_SELF'], '/pages/') !== false);
+$base     = $in_pages ? '../' : '';
+$current  = basename($_SERVER['PHP_SELF']);
+
+function nav_active($page, $current) {
+    return ($current === $page)
+        ? 'nav-link active'
+        : 'nav-link';
 }
 
-// Gunakan variabel global dari session.php
-global $ses_role;
+// Semua URL navbar harus bawa tsid agar tab tidak kehilangan sesi
+function nurl($path) {
+    global $tsid, $base;
+    return $base . $path . '?tsid=' . urlencode($tsid);
+}
 ?>
-<nav style="background: #2c3e50; padding: 0.8rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 30px;">
-    <div style="color: #ecf0f1; font-weight: bold; font-size: 1.5rem; letter-spacing: 1px;">B-ORG <span style="color: #3498db;">SYSTEM</span></div>
-    <div style="display: flex; gap: 20px;">
-        
-        <!-- BUNGKUS HREF DENGAN tab_url() -->
-        <a href="<?= tab_url('/TA_Sistem-Manajemen-Organisasi-Mahasiswa_Kel23-backup-ta/index.php') ?>" style="color: #bdc3c7; text-decoration: none; font-weight: 500; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#bdc3c7'">Dashboard</a>
-        
-        <a href="<?= tab_url('/TA_Sistem-Manajemen-Organisasi-Mahasiswa_Kel23-backup-ta/pages/anggota_tampil.php') ?>" style="color: #bdc3c7; text-decoration: none; font-weight: 500; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#bdc3c7'">Data Anggota</a>
-        
-        <?php 
-        // CEK ROLE MENGGUNAKAN $ses_role (case-insensitive)
-        if (isset($ses_role) && strtolower(trim($ses_role)) === 'admin'): 
-        ?>
-            <a href="<?= tab_url('/TA_Sistem-Manajemen-Organisasi-Mahasiswa_Kel23-backup-ta/pages/audit_log.php') ?>" style="color: #bdc3c7; text-decoration: none; font-weight: 500; transition: 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#bdc3c7'">Audit Log</a>
-        <?php endif; ?>
-        
-        <a href="<?= tab_url('/TA_Sistem-Manajemen-Organisasi-Mahasiswa_Kel23-backup-ta/logout.php') ?>" style="background: #e74c3c; color: white; padding: 6px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.9rem;">LOGOUT</a>
-    </div>
+
+<!-- CSS Navbar dipisah -->
+<link rel="stylesheet" href="<?= $base ?>assets/css/navbar.css">
+
+<div class="toast-container" id="toastContainer"></div>
+
+<nav class="b-navbar">
+  <a href="<?= nurl('index.php') ?>" class="b-nav-brand">
+    <span class="brand-icon">🏢</span>
+    B-ORG <span class="accent">SYSTEM</span>
+  </a>
+  <div class="b-nav-links">
+    <a href="<?= nurl('index.php') ?>" class="<?= nav_active('index.php', $current) ?>">Dashboard</a>
+    <a href="<?= nurl('pages/anggota_tampil.php') ?>" class="<?= nav_active('anggota_tampil.php', $current) ?>">Data Anggota</a>
+    <?php if (isset($ses_role) && $ses_role === 'admin'): ?>
+      <a href="<?= nurl('pages/audit_log.php') ?>" class="<?= nav_active('audit_log.php', $current) ?>">Audit Log</a>
+    <?php endif; ?>
+    <div class="nav-divider"></div>
+    <?php if(isset($ses_username)): ?>
+      <div class="nav-user">
+        👤 <?= htmlspecialchars($ses_username) ?>
+        <span class="role-badge <?= $ses_role==='admin'?'role-admin':'role-anggota' ?>"><?= $ses_role ?></span>
+      </div>
+    <?php endif; ?>
+    <a href="<?= $base ?>logout.php?tsid=<?= urlencode($tsid) ?>" class="btn-logout">LOGOUT</a>
+  </div>
 </nav>
+
+<script>
+// ============================================================
+// Tab Session JS — Sinkronisasi tsid antara URL dan sessionStorage
+// ============================================================
+(function () {
+    const STORAGE_KEY = 'b_org_tsid';
+
+    // 1. Ambil tsid dari URL (selalu paling fresh dari server)
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlTsid   = urlParams.get('tsid');
+
+    if (urlTsid) {
+        // Simpan ke sessionStorage tab ini
+        sessionStorage.setItem(STORAGE_KEY, urlTsid);
+    }
+
+    const tsid = sessionStorage.getItem(STORAGE_KEY) || urlTsid || '';
+    if (!tsid) return;
+
+    // 2. Inject tsid ke semua link internal yang belum punya tsid
+    function injectLinks() {
+        document.querySelectorAll('a[href]').forEach(a => {
+            const href = a.getAttribute('href');
+            if (!href) return;
+            // Skip: link eksternal, anchor, javascript, logout (sudah punya tsid dari PHP)
+            if (href.startsWith('http') || href.startsWith('#') ||
+                href.startsWith('javascript') || href.includes('logout')) return;
+            // Skip kalau sudah ada tsid
+            if (href.includes('tsid=')) return;
+            // Tambahkan tsid
+            a.href = href + (href.includes('?') ? '&' : '?') + 'tsid=' + encodeURIComponent(tsid);
+        });
+    }
+
+    // 3. Inject tsid ke semua form sebagai hidden input
+    function injectForms() {
+        document.querySelectorAll('form').forEach(form => {
+            if (form.querySelector('input[name="tsid"]')) return; // sudah ada
+            const inp  = document.createElement('input');
+            inp.type   = 'hidden';
+            inp.name   = 'tsid';
+            inp.value  = tsid;
+            form.appendChild(inp);
+        });
+    }
+
+    // Jalankan saat DOM siap
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => { injectLinks(); injectForms(); });
+    } else {
+        injectLinks(); injectForms();
+    }
+
+    // MutationObserver: tangkap link/form yang di-render dinamis (misal JS)
+    const obs = new MutationObserver(() => { injectLinks(); injectForms(); });
+    obs.observe(document.body, { childList: true, subtree: true });
+})();
+
+// ============================================================
+// Toast Notification System
+// ============================================================
+function showToast(message, type = 'success', title = '') {
+    const icons  = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+    const titles = { success: 'Berhasil!', error: 'Gagal!', warning: 'Perhatian!', info: 'Info' };
+    const toast  = document.createElement('div');
+    toast.className = 'toast ' + type;
+    toast.innerHTML =
+        '<span class="toast-icon">' + (icons[type] || '💬') + '</span>' +
+        '<div class="toast-body">' +
+            '<p class="toast-title">' + (title || titles[type]) + '</p>' +
+            '<p class="toast-msg">' + message + '</p>' +
+        '</div>' +
+        '<button class="toast-close" onclick="dismissToast(this.parentElement)">×</button>';
+    document.getElementById('toastContainer').appendChild(toast);
+    setTimeout(() => dismissToast(toast), 5000);
+}
+function dismissToast(el) {
+    if (!el) return;
+    el.classList.add('hide');
+    setTimeout(() => el && el.remove(), 380);
+}
+
+// Auto-tampilkan toast dari URL params
+(function () {
+    const p = new URLSearchParams(window.location.search);
+    if (p.get('success')) showToast(decodeURIComponent(p.get('success')), 'success');
+    if (p.get('error'))   showToast(decodeURIComponent(p.get('error')),   'error');
+    if (p.get('warning')) showToast(decodeURIComponent(p.get('warning')), 'warning');
+    if (p.get('info'))    showToast(decodeURIComponent(p.get('info')),    'info');
+})();
+</script>
