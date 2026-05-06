@@ -22,7 +22,7 @@ if (isset($_POST['login'])) {
         $_SESSION['username'] = $data['username'];
         $_SESSION['role']     = $data['role'];
 
-        header("Location: anggota_tampil.php"); // Langsung ke halaman tampil bray
+        header("Location: pages/anggota_tampil.php"); // Langsung ke halaman tampil bray
         exit();
     } else {
         $error = "Username atau Password salah, bray!";
