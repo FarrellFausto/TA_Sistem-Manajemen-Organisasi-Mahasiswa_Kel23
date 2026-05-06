@@ -67,11 +67,30 @@ function tab_redirect(string $url, array $extra = []): void {
  * Proteksi halaman: harus login
  */
 function require_login(string $base = ''): void {
-    global $ses_valid, $tsid;
+    global $ses_valid, $tsid, $conn, $ses_id_user;
+    
     if (!$ses_valid) {
         $url = $base . 'login.php';
         if ($tsid) $url .= '?tsid=' . urlencode($tsid);
         header("Location: $url");
+        exit();
+    }
+
+    // Cek real-time apakah user baru saja di-soft-delete oleh admin
+    $stmt = $conn->prepare("
+        SELECT a.deleted_at 
+        FROM users u 
+        LEFT JOIN anggota a ON u.id_anggota = a.id_anggota 
+        WHERE u.id_user = ?
+    ");
+    $stmt->bind_param("i", $ses_id_user);
+    $stmt->execute();
+    $res = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if ($res && $res['deleted_at'] !== null) {
+        destroy_tab_session($tsid);
+        header("Location: {$base}login.php?error=" . urlencode("Sesi berakhir. Akun Anda telah dinonaktifkan (diarsipkan)."));
         exit();
     }
 }
@@ -81,9 +100,12 @@ function require_login(string $base = ''): void {
  */
 function require_admin(string $base = ''): void {
     global $ses_valid, $ses_role, $tsid;
-    if (!$ses_valid || $ses_role !== 'Admin') {
-        $url = $base . 'login.php?error=' . urlencode('Akses ditolak. Hanya Admin.');
-        if ($tsid) $url .= '&tsid=' . urlencode($tsid);
+    
+    // Jalankan pengecekan login dasar & soft-delete dulu
+    require_login($base);
+
+    if (strtolower($ses_role) !== 'admin') {
+        $url = $base . 'index.php?error=' . urlencode('Akses ditolak. Fitur ini hanya untuk Admin.');
         header("Location: $url");
         exit();
     }

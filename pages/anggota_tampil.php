@@ -5,7 +5,7 @@ require_login('../');
 $search         = trim($_GET['cari'] ?? '');
 $filter_periode = (int)($_GET['periode'] ?? 0);
 
-// Build query dengan prepared statement
+// Build query dasar
 $where  = "a.deleted_at IS NULL";
 $params = []; $types = "";
 
@@ -22,7 +22,7 @@ if ($filter_periode > 0) {
     $types .= "i";
 }
 
-$sql = "SELECT a.id_anggota, a.nama_lengkap, a.nim,
+$sql_base = "SELECT a.id_anggota, a.nama_lengkap, a.nim,
                b.nama_bidang, j.nama_jabatan,
                p.label AS tahun_periode, pr.nama_proker
         FROM anggota a
@@ -31,13 +31,34 @@ $sql = "SELECT a.id_anggota, a.nama_lengkap, a.nim,
         LEFT JOIN periode p ON a.id_periode = p.id_periode
         LEFT JOIN anggota_proker ap ON a.id_anggota = ap.id_anggota
         LEFT JOIN proker pr ON ap.id_proker = pr.id_proker
-        WHERE $where 
-        ORDER BY p.id_periode DESC, a.nama_lengkap ASC";
+        WHERE $where";
 
-$stmt = $conn->prepare($sql);
-if (!empty($params)) { 
-    $stmt->bind_param($types, ...$params); 
+// Pagination logic
+$limit = 5;
+$page = (int)($_GET['page'] ?? 1);
+if ($page < 1) $page = 1;
+$offset = ($page - 1) * $limit;
+
+// Count total records
+$sql_count = "SELECT COUNT(*) FROM anggota a WHERE $where";
+$stmt_count = $conn->prepare($sql_count);
+if (!empty($params)) {
+    $stmt_count->bind_param($types, ...$params);
 }
+$stmt_count->execute();
+$total_rows = $stmt_count->get_result()->fetch_row()[0];
+$total_pages = (int)ceil($total_rows / $limit);
+$stmt_count->close();
+
+// Fetch data with LIMIT
+$sql_full = $sql_base . " ORDER BY p.id_periode DESC, a.nama_lengkap ASC LIMIT ? OFFSET ?";
+$p_limit = $params;
+$t_limit = $types . "ii";
+$p_limit[] = $limit;
+$p_limit[] = $offset;
+
+$stmt = $conn->prepare($sql_full);
+$stmt->bind_param($t_limit, ...$p_limit);
 $stmt->execute();
 $res_aktif = $stmt->get_result();
 
@@ -56,7 +77,7 @@ $all_periode = mysqli_query($conn, "SELECT * FROM periode ORDER BY id_periode DE
 <div class="main">
   <div class="page-header">
     <h2>👥 Daftar Anggota</h2>
-    <?php if($ses_role === 'admin'): ?>
+    <?php if(strtolower($ses_role) === 'admin'): ?>
       <a href="<?= tab_url('anggota_tambah.php') ?>" class="btn btn-green">➕ Tambah Anggota</a>
     <?php endif; ?>
   </div>
@@ -86,7 +107,7 @@ $all_periode = mysqli_query($conn, "SELECT * FROM periode ORDER BY id_periode DE
         <tr>
           <th>#</th><th>NIM</th><th>Nama Lengkap</th><th>Bidang</th><th>Jabatan</th>
           <th>Periode</th><th>Proker</th>
-          <?php if($ses_role === 'admin'): ?><th>Aksi</th><?php endif; ?>
+          <th>Aksi</th>
         </tr>
       </thead>
       <tbody>
@@ -107,16 +128,17 @@ $all_periode = mysqli_query($conn, "SELECT * FROM periode ORDER BY id_periode DE
             <?php endif; ?>
           </td>
 
-          <?php if($ses_role === 'admin'): ?>
           <td>
             <div class="action-group">
-              <a href="<?= tab_url('anggota_edit.php', ['id' => $row['id_anggota']]) ?>" class="btn btn-blue btn-sm">✏️</a>
-              <a href="<?= tab_url('anggota_hapus.php', ['id' => $row['id_anggota'], 'type' => 'soft']) ?>"
-                 class="btn btn-orange btn-sm"
-                 onclick="return confirm('Pindahkan <?= addslashes($row['nama_lengkap']) ?> ke tong sampah?')">🗑️</a>
+              <a href="<?= tab_url('anggota_detail.php', ['id' => $row['id_anggota']]) ?>" class="btn btn-gray btn-sm" title="Detail">👁️</a>
+              <?php if(strtolower($ses_role) === 'admin'): ?>
+                <a href="<?= tab_url('anggota_edit.php', ['id' => $row['id_anggota']]) ?>" class="btn btn-blue btn-sm" title="Edit">✏️</a>
+                <a href="<?= tab_url('anggota_hapus.php', ['id' => $row['id_anggota'], 'type' => 'soft']) ?>"
+                   class="btn btn-orange btn-sm" title="Hapus ke Trash"
+                   onclick="return confirm('Pindahkan <?= addslashes($row['nama_lengkap']) ?> ke tong sampah?')">🗑️</a>
+              <?php endif; ?>
             </div>
           </td>
-          <?php endif; ?>
         </tr>
         <?php endwhile; ?>
 
@@ -129,11 +151,27 @@ $all_periode = mysqli_query($conn, "SELECT * FROM periode ORDER BY id_periode DE
         <?php endif; ?>
       </tbody>
     </table>
-    <div class="pagination-info">Menampilkan <?= $cnt ?> anggota</div>
+    <div class="pagination-info">
+      Halaman <?= $page ?> dari <?= max(1, $total_pages) ?> · Total <?= $total_rows ?> anggota
+    </div>
   </div>
 
+  <!-- Pagination UI -->
+  <?php if($total_pages > 1): 
+    $qp = array_filter(['cari' => $search, 'periode' => $filter_periode ?: null, 'tsid' => $tsid]);
+    $base_q = '?' . http_build_query($qp);
+  ?>
+  <div class="pag">
+    <a href="<?= $base_q ?>&page=<?= max(1, $page-1) ?>" class="plink <?= $page<=1?'disabled':'' ?>">← Prev</a>
+    <?php for($i=max(1, $page-3); $i<=min($total_pages, $page+3); $i++): ?>
+      <a href="<?= $base_q ?>&page=<?= $i ?>" class="plink <?= $i==$page?'active':'' ?>"><?= $i ?></a>
+    <?php endfor; ?>
+    <a href="<?= $base_q ?>&page=<?= min($total_pages, $page+1) ?>" class="plink <?= $page>=$total_pages?'disabled':'' ?>">Next →</a>
+  </div>
+  <?php endif; ?>
+
   <!-- Tong Sampah (Admin only) -->
-  <?php if($ses_role === 'admin'): ?>
+  <?php if(strtolower($ses_role) === 'admin'): ?>
   <div class="trash-section">
     <h3>🗑️ Tong Sampah</h3>
     <div class="table-wrap">
@@ -163,9 +201,10 @@ $all_periode = mysqli_query($conn, "SELECT * FROM periode ORDER BY id_periode DE
             <td style="color:#95a5a6;font-size:.78rem"><?= date('d M Y H:i',strtotime($t['deleted_at'])) ?></td>
             <td>
               <div class="action-group">
-                <a href="<?= tab_url('anggota_hapus.php', ['id'=>$t['id_anggota'],'type'=>'restore']) ?>" class="btn btn-green btn-sm">♻️ Restore</a>
+                <a href="<?= tab_url('anggota_detail.php', ['id'=>$t['id_anggota']]) ?>" class="btn btn-gray btn-sm" title="Detail">👁️</a>
+                <a href="<?= tab_url('anggota_hapus.php', ['id'=>$t['id_anggota'],'type'=>'restore']) ?>" class="btn btn-green btn-sm" title="Restore">♻️ Restore</a>
                 <a href="<?= tab_url('anggota_hapus.php', ['id'=>$t['id_anggota'],'type'=>'hard']) ?>"
-                   class="btn btn-red btn-sm"
+                   class="btn btn-red btn-sm" title="Hapus Permanen"
                    onclick="return confirm('HAPUS PERMANEN <?= addslashes($t['nama_lengkap']) ?>?')">💣 Hapus Permanen</a>
               </div>
             </td>

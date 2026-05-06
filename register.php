@@ -5,7 +5,7 @@ include 'includes/log_helper.php';
 
 // Kalau sudah login di tab ini, tolak akses register
 if ($ses_valid) {
-    tab_redirect('pages/anggota_tampil.php');
+    tab_redirect('index.php');
 }
 
 $errors = [];
@@ -94,15 +94,16 @@ if (isset($_POST['register'])) {
 
         // Handle tanggal lahir (boleh kosong)
         $tanggal_lahir = (!empty($tgl_lahir)) ? $tgl_lahir : NULL;
+        $angkatan_val = (int)($_POST['angkatan'] ?? date('Y'));
 
         // Insert anggota
         $s2 = $conn->prepare("INSERT INTO anggota 
-            (nim, nama_lengkap, jenis_kelamin, tanggal_lahir, email, no_hp, prodi, fakultas, id_jabatan, id_bidang, id_periode) 
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+            (nim, nama_lengkap, jenis_kelamin, tanggal_lahir, email, no_hp, prodi, fakultas, angkatan, id_jabatan, id_bidang, id_periode) 
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
         );
 
         $s2->bind_param(
-            "ssssssssiii",
+            "ssssssssiiii",
             $nim,
             $nama,
             $jk,
@@ -111,6 +112,7 @@ if (isset($_POST['register'])) {
             $no_hp,
             $prodi,
             $fakultas,
+            $angkatan_val,
             $id_jabatan,
             $id_bidang,
             $id_periode
@@ -300,6 +302,12 @@ $proker  = mysqli_query($conn,
             <label>Fakultas</label>
             <input type="text" name="fakultas" placeholder="Contoh: Teknik"
                    value="<?= htmlspecialchars($_POST['fakultas'] ?? '') ?>">
+          </div>
+
+          <div class="fg">
+            <label>Angkatan</label>
+            <input type="number" name="angkatan" placeholder="Contoh: 2023"
+                   value="<?= htmlspecialchars($_POST['angkatan'] ?? date('Y')) ?>">
           </div>
 
           <div class="sec">🔐 Akun Login</div>

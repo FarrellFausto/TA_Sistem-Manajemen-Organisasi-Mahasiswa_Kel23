@@ -65,14 +65,14 @@ function nurl($path) {
   <div class="b-nav-links">
     <a href="<?= nurl('index.php') ?>" class="<?= nav_active('index.php', $current) ?>">Dashboard</a>
     <a href="<?= nurl('pages/anggota_tampil.php') ?>" class="<?= nav_active('anggota_tampil.php', $current) ?>">Data Anggota</a>
-    <?php if (isset($ses_role) && $ses_role === 'Admin'): ?>
+    <?php if (isset($ses_role) && strtolower($ses_role) === 'admin'): ?>
       <a href="<?= nurl('pages/audit_log.php') ?>" class="<?= nav_active('audit_log.php', $current) ?>">Audit Log</a>
     <?php endif; ?>
     <div class="nav-divider"></div>
     <?php if(isset($ses_username)): ?>
       <div class="nav-user">
         👤 <?= htmlspecialchars($ses_username) ?>
-        <span class="role-badge <?= $ses_role==='Admin'?'role-admin':'role-anggota' ?>"><?= $ses_role ?></span>
+        <span class="role-badge <?= strtolower($ses_role)==='admin'?'role-admin':'role-anggota' ?>"><?= $ses_role ?></span>
       </div>
     <?php endif; ?>
     <a href="<?= $base ?>logout.php?tsid=<?= urlencode($tsid) ?>" class="btn-logout">LOGOUT</a>

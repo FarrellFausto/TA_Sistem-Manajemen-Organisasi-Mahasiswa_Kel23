@@ -41,12 +41,20 @@ if ($type === 'soft') {
     tab_redirect('anggota_tampil.php', ['success' => "$nama berhasil di-restore!"]);
 
 } elseif ($type === 'hard') {
+    // 1. Hapus user terkait dulu (jika ada) agar tidak jadi data sampah
+    $stmt_u = $conn->prepare("DELETE FROM users WHERE id_anggota = ?");
+    $stmt_u->bind_param("i", $id);
+    $stmt_u->execute();
+    $stmt_u->close();
+
+    // 2. Hapus data anggota secara permanen
     $stmt = $conn->prepare("DELETE FROM anggota WHERE id_anggota = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $stmt->close();
-    catat_log($conn, $ses_id_user, "Admin $ses_username melakukan HARD DELETE: $nama (NIM: $nim, ID: $id) — DATA DIHAPUS PERMANEN");
-    tab_redirect('anggota_tampil.php', ['error' => "$nama dihapus permanen dari sistem."]);
+
+    catat_log($conn, $ses_id_user, "Admin $ses_username melakukan HARD DELETE: $nama (NIM: $nim, ID: $id) — DATA DIHAPUS PERMANEN BESERTA AKUNNYA");
+    tab_redirect('anggota_tampil.php', ['success' => "$nama dan akunnya telah dihapus permanen dari sistem."]);
 
 } else {
     tab_redirect('anggota_tampil.php', ['error' => 'Tipe operasi tidak dikenal.']);

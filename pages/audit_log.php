@@ -5,7 +5,7 @@ require_admin('../');
 $filter_user    = (int)($_GET['id_user'] ?? 0);
 $filter_keyword = trim($_GET['q'] ?? '');
 $page            = max(1, (int)($_GET['page'] ?? 1));
-$per_page       = 20;
+$per_page       = 5;
 $offset         = ($page - 1) * $per_page;
 
 // Build WHERE
@@ -35,7 +35,7 @@ $stmt->execute();
 $logs = $stmt->get_result();
 $stmt->close();
 
-$all_admins  = mysqli_query($conn, "SELECT id_user, username FROM users WHERE role='Admin' ORDER BY username");
+$all_admins  = mysqli_query($conn, "SELECT id_user, username FROM users WHERE role='admin' ORDER BY username");
 $total_log   = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM log_aktivitas"))[0];
 $total_hari  = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM log_aktivitas WHERE DATE(waktu) = CURDATE()"))[0];
 $total_admin_aktif = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(DISTINCT id_user) FROM log_aktivitas WHERE id_user IS NOT NULL"))[0];
@@ -72,7 +72,7 @@ $total_admin_aktif = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(DISTINCT
       <div class="snum"><?= $total_hari ?></div>
     </div>
     <div class="stat orange">
-      <div class="slabel">👤 Admin Aktif</div>
+      <div class="slabel">👤 Admin Terdaftar</div>
       <div class="snum"><?= $total_admin_aktif ?></div>
     </div>
   </div>
@@ -116,7 +116,7 @@ $total_admin_aktif = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(DISTINCT
           <td style="color:#bdc3c7;font-size:.76rem"><?= $log['id_log'] ?></td>
           <td>
             <?php if($log['username']): ?>
-              <span class="badge <?= $log['role']==='Admin'?'badge-admin':'badge-member' ?>">
+              <span class="badge <?= strtolower($log['role']) === 'admin' ? 'badge-admin' : 'badge-member' ?>">
                 <?= htmlspecialchars($log['username']) ?>
               </span>
             <?php else: ?>

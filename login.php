@@ -5,7 +5,7 @@
 include 'config/koneksi.php';
 
 if ($ses_valid) {
-    tab_redirect('pages/anggota_tampil.php');
+    tab_redirect('index.php');
 }
 
 $error = '';
@@ -37,23 +37,33 @@ if (isset($_POST['login'])) {
         $new_tsid = bin2hex(random_bytes(16));
     }
 
-    $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
+    $stmt = $conn->prepare("
+        SELECT u.*, a.deleted_at 
+        FROM users u 
+        LEFT JOIN anggota a ON u.id_anggota = a.id_anggota 
+        WHERE u.username = ?
+    ");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $data = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
     if ($data && password_verify($password, $data['password'])) {
-        create_tab_session($new_tsid, $data['id_user'], $data['username'], $data['role']);
+        // Cek apakah akun sedang di "Tong Sampah" (soft delete)
+        if ($data['deleted_at'] !== null) {
+            $error = "Akun Anda sedang dinonaktifkan (berada di Tong Sampah). Silakan hubungi Admin untuk restore!";
+        } else {
+            create_tab_session($new_tsid, $data['id_user'], $data['username'], $data['role']);
 
-        global $tsid;
-        $tsid = $new_tsid;
+            global $tsid;
+            $tsid = $new_tsid;
 
-        tab_redirect('pages/anggota_tampil.php', [
-            'success' => "Selamat datang, {$data['username']}!"
-        ]);
+            tab_redirect('index.php', [
+                'success' => "Selamat datang kembali, {$data['username']}!"
+            ]);
+        }
     } else {
-        $error = "Username atau password salah, bray!";
+        $error = "Username atau password salah!";
     }
 }
 ?>

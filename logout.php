@@ -16,7 +16,7 @@ destroy_tab_session($tsid);
   <title>Logout — B-ORG</title>
 
   <!-- LINK CSS -->
-  <link rel="stylesheet" href="css/logout.css">
+  <link rel="stylesheet" href="logout.css">
 </head>
 <body>
   <div class="card">
