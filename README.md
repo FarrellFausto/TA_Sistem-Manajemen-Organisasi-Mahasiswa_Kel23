@@ -11,7 +11,7 @@ Sistem ini dirancang untuk mengelola data anggota, periode kepengurusan, dan log
 * **Rhea Alya K** - Database Engineer
 * **Rabelva Evan Ligar** - Backend Developer
 * **Jedan** - Backend Developer
-* [Nama teman] - Backend Developer
+* **Satria** - Backend Developer
 * **Mirah** - Frontend Developer
 * **Aufan** - Frontend Developer
 
