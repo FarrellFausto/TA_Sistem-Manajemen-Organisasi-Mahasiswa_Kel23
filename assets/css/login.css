@@ -54,7 +54,7 @@ body {
 }
 
 .left-panel::after {
-  background: rgba(27, 201, 192, 0.55);
+  background: rgba(52, 152, 219, 0.65);
   bottom: -140px;
   right: -120px;
   animation: blobMove2 12s ease-in-out infinite;
