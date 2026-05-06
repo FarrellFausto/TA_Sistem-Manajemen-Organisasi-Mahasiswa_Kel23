@@ -54,6 +54,9 @@ if (isset($_POST['update'])) {
     $tanggal_lahir = (!empty($tgl_lahir)) ? $tgl_lahir : NULL;
 
     if (empty($errors)) {
+        // =========================
+        // UPDATE DATA
+        // =========================
         $stmt = $conn->prepare("
             UPDATE anggota SET 
                 nama_lengkap=?, jenis_kelamin=?, tanggal_lahir=?, email=?, no_hp=?, prodi=?, fakultas=?,
@@ -69,6 +72,22 @@ if (isset($_POST['update'])) {
         $stmt->execute();
         $stmt->close();
 
+        // =========================
+        //  AUDIT LOG TAMBAHAN
+        // =========================
+        $id_user = $_SESSION['id_user'] ?? null;
+
+        $aksi = "Mengedit anggota: {$nama} (ID: {$id})";
+
+        $log = $conn->prepare("
+            INSERT INTO log_aktivitas (id_user, aksi, waktu)
+            VALUES (?, ?, NOW())
+        ");
+        $log->bind_param("is", $id_user, $aksi);
+        $log->execute();
+        $log->close();
+
+        // redirect
         tab_redirect('anggota_tampil.php', [
             'success' => "Data anggota berhasil diupdate!"
         ]);
@@ -82,7 +101,6 @@ if (isset($_POST['update'])) {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Edit Anggota — B-ORG</title>
 
-  <!-- LINK CSS -->
   <link rel="stylesheet" href="../assets/css/anggota_edit.css">
 </head>
 <body>
