@@ -199,8 +199,7 @@ $proker  = mysqli_query($conn,
         <span class="highlight">tercatat rapi.</span>
       </h1>
       <p>
-        Pantau struktur organisasi, program kerja, dan anggota secara real-time.
-        Data lebih rapi, akurat, dan mudah dikelola.
+        Pantau data organisasi secara real-time, cepat dan akurat.
       </p>
     </div>
 
