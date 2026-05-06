@@ -77,7 +77,17 @@ function require_login(string $base = ''): void {
 }
 
 /**
-
+ * Proteksi halaman: harus Admin
+ */
+function require_admin(string $base = ''): void {
+    global $ses_valid, $ses_role, $tsid;
+    if (!$ses_valid || $ses_role !== 'Admin') {
+        $url = $base . 'login.php?error=' . urlencode('Akses ditolak. Hanya Admin.');
+        if ($tsid) $url .= '&tsid=' . urlencode($tsid);
+        header("Location: $url");
+        exit();
+    }
+}
 
 /**
  * Buat tab session baru saat login berhasil
