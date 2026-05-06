@@ -1,128 +1,265 @@
 <?php
 include '../config/koneksi.php';
-session_start();
+require_login('../');
 
-if (!isset($_SESSION['role'])) {
-    header("Location: login.php");
-    exit();
-}
+$search         = trim($_GET['cari'] ?? '');
+$filter_periode = (int)($_GET['periode'] ?? 0);
 
-$role_user = $_SESSION['role'];
-$search = isset($_GET['cari']) ? mysqli_real_escape_string($conn, $_GET['cari']) : "";
-$filter_periode = isset($_GET['periode']) ? (int)$_GET['periode'] : 0;
+// Build query dengan prepared statement
+$where  = "a.deleted_at IS NULL";
+$params = [];
+$types  = "";
 
-$where_clause = "a.deleted_at IS NULL";
 if (!empty($search)) {
-    $where_clause .= " AND (a.nama_lengkap LIKE '%$search%' OR a.nim LIKE '%$search%')";
+    $where .= " AND (a.nama_lengkap LIKE ? OR a.nim LIKE ?)";
+    $s = "%$search%";
+    $params[] = $s;
+    $params[] = $s;
+    $types .= "ss";
 }
+
 if ($filter_periode > 0) {
-    $where_clause .= " AND a.id_periode = $filter_periode";
+    $where .= " AND a.id_periode = ?";
+    $params[] = $filter_periode;
+    $types .= "i";
 }
 
-$query_aktif = "SELECT a.*, b.nama_bidang, j.nama_jabatan, p.label as nama_periode
-                FROM anggota a
-                JOIN bidang b ON a.id_bidang = b.id_bidang
-                JOIN jabatan j ON a.id_jabatan = j.id_jabatan
-                JOIN periode p ON a.id_periode = p.id_periode
-                WHERE $where_clause";
-$res_aktif = mysqli_query($conn, $query_aktif);
+$sql = "SELECT a.id_anggota, a.nama_lengkap, a.nim,
+               b.nama_bidang, j.nama_jabatan,
+               p.label AS tahun_periode, pr.nama_proker
+        FROM anggota a
+        LEFT JOIN bidang b ON a.id_bidang = b.id_bidang
+        JOIN jabatan j ON a.id_jabatan = j.id_jabatan
+        LEFT JOIN periode p ON a.id_periode = p.id_periode
+        LEFT JOIN anggota_proker ap ON a.id_anggota = ap.id_anggota
+        LEFT JOIN proker pr ON ap.id_proker = pr.id_proker
+        WHERE $where
+        ORDER BY p.id_periode DESC, a.nama_lengkap ASC";
 
-$res_periode = mysqli_query($conn, "SELECT * FROM periode ORDER BY tahun_mulai DESC");
+$stmt = $conn->prepare($sql);
+
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
+
+$stmt->execute();
+$res_aktif = $stmt->get_result();
+
+$all_periode = mysqli_query($conn, "SELECT * FROM periode ORDER BY id_periode DESC");
 ?>
-
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <title>Data Anggota</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Data Anggota — B-ORG</title>
+
+  <!-- LINK CSS -->
+  <link rel="stylesheet" href="../assets/css/anggota_tampil.css">
 </head>
-<body style="font-family: sans-serif; background: #f8f9fa; margin: 0;">
-    <?php include '../includes/navbar.php'; ?>
-    
-    <div style="padding: 30px; max-width: 1200px; margin: auto;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="color: #2c3e50;">Daftar Anggota Aktif</h2>
-            <?php if($role_user == 'admin'): ?>
-                <a href="anggota_tambah.php" style="background: #27ae60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">+ Tambah Anggota</a>
+<body>
+
+<?php include '../includes/navbar.php'; ?>
+
+<div class="main">
+  <div class="page-header">
+    <h2>👥 Daftar Anggota</h2>
+
+    <?php if($ses_role === 'admin'): ?>
+      <a href="<?= tab_url('anggota_tambah.php') ?>" class="btn btn-green">➕ Tambah Anggota</a>
+    <?php endif; ?>
+  </div>
+
+  <!-- Filter -->
+  <form method="GET" class="filter-bar">
+    <input type="hidden" name="tsid" value="<?= htmlspecialchars($tsid) ?>">
+
+    <input type="text" name="cari" placeholder="🔍 Cari nama atau NIM..."
+           value="<?= htmlspecialchars($search) ?>">
+
+    <select name="periode">
+      <option value="0">📅 Semua Periode</option>
+      <?php while($p = mysqli_fetch_assoc($all_periode)): ?>
+        <option value="<?= $p['id_periode'] ?>" <?= $filter_periode==$p['id_periode']?'selected':'' ?>>
+          Periode <?= htmlspecialchars($p['label']) ?>
+        </option>
+      <?php endwhile; ?>
+    </select>
+
+    <button type="submit" class="btn btn-blue btn-sm">Filter</button>
+
+    <?php if(!empty($search) || $filter_periode > 0): ?>
+      <a href="<?= tab_url('anggota_tampil.php') ?>" class="btn btn-gray btn-sm">✕ Reset</a>
+    <?php endif; ?>
+  </form>
+
+  <!-- Tabel -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>NIM</th>
+          <th>Nama Lengkap</th>
+          <th>Bidang</th>
+          <th>Jabatan</th>
+          <th>Periode</th>
+          <th>Proker</th>
+          <?php if($ses_role === 'admin'): ?>
+            <th>Aksi</th>
+          <?php endif; ?>
+        </tr>
+      </thead>
+
+      <tbody>
+        <?php
+        $no  = 1;
+        $cnt = 0;
+        while($row = $res_aktif->fetch_assoc()):
+          $cnt++;
+        ?>
+        <tr>
+          <td style="color:#bdc3c7;font-size:.8rem"><?= $no++ ?></td>
+
+          <td>
+            <code style="background:#f0f3f8;padding:2px 7px;border-radius:5px;font-size:.8rem">
+              <?= htmlspecialchars($row['nim']) ?>
+            </code>
+          </td>
+
+          <td><strong><?= htmlspecialchars($row['nama_lengkap']) ?></strong></td>
+
+          <td>
+            <span class="badge badge-blue"><?= htmlspecialchars($row['nama_bidang'] ?? '-') ?></span>
+          </td>
+
+          <td><?= htmlspecialchars($row['nama_jabatan'] ?? '-') ?></td>
+
+          <td>
+            <span class="badge badge-green">📅 <?= htmlspecialchars($row['tahun_periode'] ?? '-') ?></span>
+          </td>
+
+          <td>
+            <?php if(!empty($row['nama_proker'])): ?>
+              <span class="badge badge-orange">📋 <?= htmlspecialchars($row['nama_proker']) ?></span>
+            <?php else: ?>
+              <span class="badge badge-gray">-</span>
             <?php endif; ?>
-        </div>
+          </td>
 
-        <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-            <form method="GET" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <label style="font-weight: bold; color: #2c3e50;">Filter Periode:</label>
-                <select name="periode" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; min-width: 150px;">
-                    <option value="">Semua Periode</option>
-                    <?php while($pr = mysqli_fetch_assoc($res_periode)): ?>
-                        <option value="<?= $pr['id_periode'] ?>" <?= ($filter_periode == $pr['id_periode']) ? 'selected' : '' ?>>
-                            <?= $pr['label'] ?>
-                        </option>
-                    <?php endwhile; ?>
-                </select>
-                <input type="text" name="cari" placeholder="Cari NIM/Nama..." value="<?= htmlspecialchars($search) ?>" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; width: 200px;">
-                <button type="submit" style="padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;">Filter</button>
-                <?php if($filter_periode > 0 || !empty($search)): ?>
-                    <a href="anggota_tampil.php" style="padding: 8px 16px; color: #e74c3c; text-decoration: none;">Reset</a>
-                <?php endif; ?>
-            </form>
-        </div>
+          <?php if($ses_role === 'admin'): ?>
+          <td>
+            <div class="action-group">
 
-        <table style="width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <thead>
-                <tr style="background: #2c3e50; color: white; text-align: left;">
-                    <th style="padding: 15px;">NIM</th>
-                    <th style="padding: 15px;">Nama Lengkap</th>
-                    <th style="padding: 15px;">Bidang</th>
-                    <th style="padding: 15px;">Jabatan</th>
-                    <th style="padding: 15px;">Periode</th>
-                    <?php if($role_user == 'admin'): ?>
-                        <th style="padding: 15px;">Aksi</th>
-                    <?php endif; ?>
-                </tr>
-            </thead>
-            <tbody>
-                <?php while($row = mysqli_fetch_assoc($res_aktif)): ?>
-                <tr style="border-bottom: 1px solid #eee;">
-                    <td style="padding: 15px;"><?= $row['nim'] ?></td>
-                    <td style="padding: 15px;"><b><?= $row['nama_lengkap'] ?></b></td>
-                    <td style="padding: 15px;"><?= $row['nama_bidang'] ?></td>
-                    <td style="padding: 15px;"><?= $row['nama_jabatan'] ?></td>
-                    <td style="padding: 15px;"><span style="background: #e8f5e9; color: #2e7d32; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: bold;"><?= $row['nama_periode'] ?></span></td>
-                    <?php if($role_user == 'admin'): ?>
-                    <td style="padding: 15px;">
-                        <a href="anggota_edit.php?id=<?= $row['id_anggota'] ?>" style="color: #3498db; text-decoration: none;">Edit</a> | 
-                        <a href="anggota_hapus.php?id=<?= $row['id_anggota'] ?>&type=soft" style="color: #f39c12; text-decoration: none;">Soft Delete</a>
-                    </td>
-                    <?php endif; ?>
-                </tr>
-                <?php endwhile; ?>
-            </tbody>
-        </table>
+              <!-- FIX EDIT -->
+              <a href="<?= tab_url('anggota_edit.php', ['id' => $row['id_anggota']]) ?>"
+                 class="btn btn-blue btn-sm">✏️</a>
 
-        <!-- RESTORE SECTION - HANYA ADMIN -->
-        <?php if($role_user == 'admin'): ?>
-            <div style="margin-top: 50px;">
-                <h3 style="color: #e74c3c;">Tong Sampah (Restore Data)</h3>
-                <table style="width: 100%; border-collapse: collapse; background: #fff5f5;">
-                    <tr style="background: #c0392b; color: white; text-align: left;">
-                        <th style="padding: 12px;">NIM</th>
-                        <th style="padding: 12px;">Nama</th>
-                        <th style="padding: 12px;">Aksi</th>
-                    </tr>
-                    <?php 
-                    $res_trash = mysqli_query($conn, "SELECT * FROM anggota WHERE deleted_at IS NOT NULL");
-                    while($trash = mysqli_fetch_assoc($res_trash)): 
-                    ?>
-                    <tr style="border-bottom: 1px solid #ddd;">
-                        <td style="padding: 12px;"><?= $trash['nim'] ?></td>
-                        <td style="padding: 12px;"><?= $trash['nama_lengkap'] ?></td>
-                        <td style="padding: 12px;">
-                            <a href="anggota_hapus.php?id=<?= $trash['id_anggota'] ?>&type=restore" style="color: #27ae60; text-decoration: none; font-weight: bold;">RESTORE</a> | 
-                            <a href="anggota_hapus.php?id=<?= $trash['id_anggota'] ?>&type=hard" style="color: #e74c3c; text-decoration: none;" onclick="return confirm('Hapus Permanen?')">Hard Delete</a>
-                        </td>
-                    </tr>
-                    <?php endwhile; ?>
-                </table>
+              <!-- FIX HAPUS (JANGAN PAKAI pages/ lagi karena sudah di folder pages) -->
+              <a href="<?= tab_url('anggota_hapus.php', ['id' => $row['id_anggota'], 'type' => 'soft']) ?>"
+                 class="btn btn-orange btn-sm"
+                 onclick="return confirm('Pindahkan <?= addslashes($row['nama_lengkap']) ?> ke tong sampah?')">🗑️</a>
+
             </div>
+          </td>
+          <?php endif; ?>
+        </tr>
+        <?php endwhile; ?>
+
+        <?php if($cnt === 0): ?>
+        <tr>
+          <td colspan="8">
+            <div class="empty-state">
+              <div class="icon">🔍</div>
+              <p>Tidak ada anggota ditemukan<?= $search ? " untuk \"".htmlspecialchars($search)."\"" : "" ?></p>
+            </div>
+          </td>
+        </tr>
         <?php endif; ?>
+      </tbody>
+    </table>
+
+    <div class="pagination-info">Menampilkan <?= $cnt ?> anggota</div>
+  </div>
+
+  <!-- Tong Sampah (Admin only) -->
+  <?php if($ses_role === 'admin'): ?>
+  <div class="trash-section">
+    <h3>🗑️ Tong Sampah</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr style="background:linear-gradient(135deg,#c0392b,#e74c3c)">
+            <th>#</th>
+            <th>NIM</th>
+            <th>Nama</th>
+            <th>Periode</th>
+            <th>Dihapus</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <?php
+          $trash = mysqli_query($conn,"
+              SELECT a.*, p.label AS tahun_periode
+              FROM anggota a
+              LEFT JOIN periode p ON a.id_periode = p.id_periode
+              WHERE a.deleted_at IS NOT NULL
+              ORDER BY a.deleted_at DESC
+          ");
+
+          $tc = 0;
+          while($t = mysqli_fetch_assoc($trash)):
+            $tc++;
+          ?>
+          <tr>
+            <td style="color:#bdc3c7;font-size:.8rem"><?= $tc ?></td>
+
+            <td>
+              <code style="background:#f0f3f8;padding:2px 7px;border-radius:5px;font-size:.8rem">
+                <?= htmlspecialchars($t['nim']) ?>
+              </code>
+            </td>
+
+            <td><strong><?= htmlspecialchars($t['nama_lengkap']) ?></strong></td>
+
+            <td><?= htmlspecialchars($t['tahun_periode'] ?? '-') ?></td>
+
+            <td style="color:#95a5a6;font-size:.78rem">
+              <?= date('d M Y H:i', strtotime($t['deleted_at'])) ?>
+            </td>
+
+            <td>
+              <div class="action-group">
+
+                <a href="<?= tab_url('anggota_hapus.php', ['id'=>$t['id_anggota'],'type'=>'restore']) ?>"
+                   class="btn btn-green btn-sm">♻️ Restore</a>
+
+                <a href="<?= tab_url('anggota_hapus.php', ['id'=>$t['id_anggota'],'type'=>'hard']) ?>"
+                   class="btn btn-red btn-sm"
+                   onclick="return confirm('HAPUS PERMANEN <?= addslashes($t['nama_lengkap']) ?>?')">💣 Hapus Permanen</a>
+
+              </div>
+            </td>
+          </tr>
+          <?php endwhile; ?>
+
+          <?php if($tc === 0): ?>
+          <tr>
+            <td colspan="6" style="text-align:center;padding:28px;color:#95a5a6">
+              Tong sampah kosong 🎉
+            </td>
+          </tr>
+          <?php endif; ?>
+        </tbody>
+      </table>
     </div>
+  </div>
+  <?php endif; ?>
+
+</div>
+
 </body>
 </html>
