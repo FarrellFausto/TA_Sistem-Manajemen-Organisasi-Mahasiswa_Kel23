@@ -1,85 +1,225 @@
 <?php
 include '../config/koneksi.php';
-session_start();
-if ($_SESSION['role'] != 'admin') die("Hanya Admin yang bisa edit data!");
+require_login('../');
 
-$id = $_GET['id'];
-// Ambil data lama
-$query_lama = mysqli_query($conn, "SELECT a.*, tp.id_proker FROM anggota a 
-                                   LEFT JOIN tugas_proker tp ON a.id_anggota = tp.id_anggota 
-                                   WHERE a.id_anggota = $id");
-$d = mysqli_fetch_assoc($query_lama);
+$id = (int)($_GET['id'] ?? 0);
+if ($id <= 0) {
+    die("ID anggota tidak valid.");
+}
 
+$errors = [];
+
+// ambil data anggota
+$stmt = $conn->prepare("
+    SELECT * FROM anggota 
+    WHERE id_anggota = ? AND deleted_at IS NULL
+");
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$data = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+if (!$data) {
+    die("Data anggota tidak ditemukan.");
+}
+
+// ambil bidang, jabatan, periode
+$bidang  = mysqli_query($conn, "SELECT * FROM bidang ORDER BY nama_bidang");
+$jabatan = mysqli_query($conn, "SELECT * FROM jabatan ORDER BY nama_jabatan");
+$periode = mysqli_query($conn, "SELECT * FROM periode ORDER BY id_periode DESC");
+
+// proses update
 if (isset($_POST['update'])) {
-    $nama = $_POST['nama_lengkap'];
-    $id_bidang = $_POST['id_bidang'];
-    $id_jabatan = $_POST['id_jabatan'];
-    $id_proker = $_POST['id_proker'];
+    $nama      = trim($_POST['nama_lengkap'] ?? '');
+    $jk        = trim($_POST['jenis_kelamin'] ?? '');
+    $tgl_lahir = trim($_POST['tanggal_lahir'] ?? '');
+    $email     = trim($_POST['email'] ?? '');
+    $no_hp     = trim($_POST['no_hp'] ?? '');
+    $prodi     = trim($_POST['prodi'] ?? '');
+    $fakultas  = trim($_POST['fakultas'] ?? '');
+    $id_bidang = (int)($_POST['id_bidang'] ?? 0);
+    $id_jabatan= (int)($_POST['id_jabatan'] ?? 0);
+    $id_periode= (int)($_POST['id_periode'] ?? 0);
 
-    // Update tabel anggota
-    mysqli_query($conn, "UPDATE anggota SET nama_lengkap='$nama', id_bidang='$id_bidang', id_jabatan='$id_jabatan' WHERE id_anggota=$id");
+    if (empty($nama)) $errors[] = "Nama lengkap tidak boleh kosong.";
+    if (empty($jk)) $errors[] = "Jenis kelamin wajib dipilih.";
+    if ($id_bidang <= 0) $errors[] = "Bidang wajib dipilih.";
+    if ($id_jabatan <= 0) $errors[] = "Jabatan wajib dipilih.";
+    if ($id_periode <= 0) $errors[] = "Periode wajib dipilih.";
 
-    // Update tabel tugas_proker (Hapus lama, pasang baru)
-    mysqli_query($conn, "DELETE FROM tugas_proker WHERE id_anggota=$id");
-    if (!empty($id_proker)) {
-        mysqli_query($conn, "INSERT INTO tugas_proker (id_anggota, id_proker) VALUES ($id, $id_proker)");
+    if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = "Format email tidak valid.";
     }
 
-    echo "<script>alert('Data Berhasil Diupdate!'); window.location='anggota_tampil.php';</script>";
+    $tanggal_lahir = (!empty($tgl_lahir)) ? $tgl_lahir : NULL;
+
+    if (empty($errors)) {
+        $stmt = $conn->prepare("
+            UPDATE anggota SET 
+                nama_lengkap=?, jenis_kelamin=?, tanggal_lahir=?, email=?, no_hp=?, prodi=?, fakultas=?,
+                id_bidang=?, id_jabatan=?, id_periode=?
+            WHERE id_anggota=?
+        ");
+        $stmt->bind_param(
+            "sssssssiiii",
+            $nama, $jk, $tanggal_lahir, $email, $no_hp, $prodi, $fakultas,
+            $id_bidang, $id_jabatan, $id_periode,
+            $id
+        );
+        $stmt->execute();
+        $stmt->close();
+
+        tab_redirect('anggota_tampil.php', [
+            'success' => "Data anggota berhasil diupdate!"
+        ]);
+    }
 }
 ?>
-
 <!DOCTYPE html>
-<html>
-<head><title>Edit Anggota</title></head>
-<body style="font-family: sans-serif; background: #f8f9fa; margin: 0;">
-    <?php include '../includes/navbar.php'; ?>
-    <div style="max-width: 600px; margin: 50px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-        <h2 style="color: #2c3e50; text-align: center;">Edit Data Anggota</h2>
-        <form method="POST">
-            <label>Nama Lengkap:</label><br>
-            <input type="text" name="nama_lengkap" value="<?= $d['nama_lengkap'] ?>" required style="width: 100%; padding: 10px; margin: 10px 0;"><br>
-            
-            <label>Pilih Bidang:</label><br>
-            <select name="id_bidang" style="width: 100%; padding: 10px; margin: 10px 0;">
-                <?php
-                $bidang = mysqli_query($conn, "SELECT * FROM bidang");
-                while($b = mysqli_fetch_assoc($bidang)) {
-                    $sel = ($b['id_bidang'] == $d['id_bidang']) ? 'selected' : '';
-                    echo "<option value='".$b['id_bidang']."' $sel>".$b['nama_bidang']."</option>";
-                }
-                ?>
-            </select><br>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Edit Anggota — B-ORG</title>
 
-            <label>Pilih Jabatan:</label><br>
-            <select name="id_jabatan" style="width: 100%; padding: 10px; margin: 10px 0;">
-                <?php
-                $jabatan = mysqli_query($conn, "SELECT * FROM jabatan");
-                while($j = mysqli_fetch_assoc($jabatan)) {
-                    $sel = ($j['id_jabatan'] == $d['id_jabatan']) ? 'selected' : '';
-                    echo "<option value='".$j['id_jabatan']."' $sel>".$j['nama_jabatan']."</option>";
-                }
-                ?>
-            </select><br>
+  <!-- LINK CSS -->
+  <link rel="stylesheet" href="../assets/css/anggota_edit.css">
+</head>
+<body>
 
-            <label>Pilih Proker (Slot Max 2):</label><br>
-            <select name="id_proker" style="width: 100%; padding: 10px; margin: 10px 0;">
-                <option value="">-- Tanpa Proker --</option>
-                <?php
-                $q_kuota = "SELECT p.*, COUNT(tp.id_tugas) as terisi FROM proker p 
-                            LEFT JOIN tugas_proker tp ON p.id_proker = tp.id_proker 
-                            GROUP BY p.id_proker HAVING terisi < 2 OR p.id_proker = '".$d['id_proker']."'";
-                $proker = mysqli_query($conn, $q_kuota);
-                while($p = mysqli_fetch_assoc($proker)) {
-                    $sel = ($p['id_proker'] == $d['id_proker']) ? 'selected' : '';
-                    echo "<option value='".$p['id_proker']."' $sel>".$p['nama_proker']."</option>";
-                }
-                ?>
-            </select><br><br>
+<?php include '../includes/navbar.php'; ?>
 
-            <button type="submit" name="update" style="width: 100%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">SIMPAN PERUBAHAN</button>
-            <a href="anggota_tampil.php" style="display: block; text-align: center; margin-top: 15px; color: #7f8c8d; text-decoration: none;">Batal</a>
-        </form>
+<div class="main">
+  <div class="card">
+    <div class="card-header">
+      <h2>✏️ Edit Data Anggota</h2>
+      <p>Silakan ubah data anggota sesuai kebutuhan</p>
     </div>
+
+    <div class="card-body">
+
+      <div class="info-bar">
+        Anda sedang mengedit anggota: <strong><?= htmlspecialchars($data['nama_lengkap']) ?></strong>
+      </div>
+
+      <?php if(!empty($errors)): ?>
+        <div class="errors">
+          <strong>Terdapat kesalahan:</strong>
+          <ul>
+            <?php foreach($errors as $e): ?>
+              <li><?= $e ?></li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+      <?php endif; ?>
+
+      <form method="POST">
+
+        <div class="sec">📋 Biodata</div>
+
+        <div class="fg">
+          <label>NIM</label>
+          <input type="text" value="<?= htmlspecialchars($data['nim']) ?>" readonly>
+        </div>
+
+        <div class="fg">
+          <label>Nama Lengkap <span class="req">*</span></label>
+          <input type="text" name="nama_lengkap" required value="<?= htmlspecialchars($_POST['nama_lengkap'] ?? $data['nama_lengkap']) ?>">
+        </div>
+
+        <div class="row2">
+          <div class="fg">
+            <label>Jenis Kelamin <span class="req">*</span></label>
+            <select name="jenis_kelamin" required>
+              <option value="">-- Pilih --</option>
+              <option value="L" <?= (($_POST['jenis_kelamin'] ?? $data['jenis_kelamin']) == 'L') ? 'selected' : '' ?>>Laki-laki</option>
+              <option value="P" <?= (($_POST['jenis_kelamin'] ?? $data['jenis_kelamin']) == 'P') ? 'selected' : '' ?>>Perempuan</option>
+            </select>
+          </div>
+
+          <div class="fg">
+            <label>Tanggal Lahir</label>
+            <input type="date" name="tanggal_lahir" value="<?= htmlspecialchars($_POST['tanggal_lahir'] ?? $data['tanggal_lahir']) ?>">
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="fg">
+            <label>Email</label>
+            <input type="email" name="email" value="<?= htmlspecialchars($_POST['email'] ?? $data['email']) ?>">
+          </div>
+
+          <div class="fg">
+            <label>No HP</label>
+            <input type="text" name="no_hp" value="<?= htmlspecialchars($_POST['no_hp'] ?? $data['no_hp']) ?>">
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="fg">
+            <label>Prodi</label>
+            <input type="text" name="prodi" value="<?= htmlspecialchars($_POST['prodi'] ?? $data['prodi']) ?>">
+          </div>
+
+          <div class="fg">
+            <label>Fakultas</label>
+            <input type="text" name="fakultas" value="<?= htmlspecialchars($_POST['fakultas'] ?? $data['fakultas']) ?>">
+          </div>
+        </div>
+
+        <div class="sec">🏢 Struktur Organisasi</div>
+
+        <div class="fg">
+          <label>Periode <span class="req">*</span></label>
+          <select name="id_periode" required>
+            <option value="">-- Pilih Periode --</option>
+            <?php while($p = mysqli_fetch_assoc($periode)): ?>
+              <option value="<?= $p['id_periode'] ?>"
+                <?= (($_POST['id_periode'] ?? $data['id_periode']) == $p['id_periode']) ? 'selected' : '' ?>>
+                <?= htmlspecialchars($p['label']) ?>
+              </option>
+            <?php endwhile; ?>
+          </select>
+        </div>
+
+        <div class="row2">
+          <div class="fg">
+            <label>Bidang <span class="req">*</span></label>
+            <select name="id_bidang" required>
+              <option value="">-- Pilih Bidang --</option>
+              <?php while($b = mysqli_fetch_assoc($bidang)): ?>
+                <option value="<?= $b['id_bidang'] ?>"
+                  <?= (($_POST['id_bidang'] ?? $data['id_bidang']) == $b['id_bidang']) ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($b['nama_bidang']) ?>
+                </option>
+              <?php endwhile; ?>
+            </select>
+          </div>
+
+          <div class="fg">
+            <label>Jabatan <span class="req">*</span></label>
+            <select name="id_jabatan" required>
+              <option value="">-- Pilih Jabatan --</option>
+              <?php while($j = mysqli_fetch_assoc($jabatan)): ?>
+                <option value="<?= $j['id_jabatan'] ?>"
+                  <?= (($_POST['id_jabatan'] ?? $data['id_jabatan']) == $j['id_jabatan']) ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($j['nama_jabatan']) ?>
+                </option>
+              <?php endwhile; ?>
+            </select>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button type="submit" name="update" class="btn btn-blue">💾 Simpan Perubahan</button>
+          <a href="<?= tab_url('anggota_tampil.php') ?>" class="btn btn-outline">↩ Kembali</a>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
