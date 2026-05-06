@@ -5,7 +5,7 @@
 include 'config/koneksi.php';
 
 if ($ses_valid) {
-    tab_redirect('pages/anggota_tampil.php');
+    tab_redirect('index.php');
 }
 
 $error = '';
@@ -49,7 +49,7 @@ if (isset($_POST['login'])) {
         global $tsid;
         $tsid = $new_tsid;
 
-        tab_redirect('pages/anggota_tampil.php', [
+        tab_redirect('index.php', [
             'success' => "Selamat datang, {$data['username']}!"
         ]);
     } else {
