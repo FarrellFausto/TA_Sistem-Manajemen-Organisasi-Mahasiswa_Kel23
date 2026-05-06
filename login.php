@@ -3,18 +3,14 @@
 // login.php — Login dengan Tab-Aware Session
 // ============================================================
 include 'config/koneksi.php';
-// (session.php sudah di-load via koneksi.php)
 
-// Kalau sudah login di tab ini, langsung ke dashboard
 if ($ses_valid) {
     tab_redirect('pages/anggota_tampil.php');
 }
 
 $error = '';
 
-// =======================
-// AUTO COUNT DATA (panel kiri)
-// =======================
+// AUTO COUNT
 $jml_bidang  = 0;
 $jml_anggota = 0;
 $status_tahun = date('Y');
@@ -31,13 +27,10 @@ if ($qAnggota) {
     $jml_anggota = $row['total'] ?? 0;
 }
 
-// =======================
 // PROSES LOGIN
-// =======================
 if (isset($_POST['login'])) {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
-    // tsid dari form hidden field (di-generate JS sebelum submit)
     $new_tsid = trim($_POST['new_tsid'] ?? '');
 
     if (empty($new_tsid)) {
@@ -51,10 +44,8 @@ if (isset($_POST['login'])) {
     $stmt->close();
 
     if ($data && password_verify($password, $data['password'])) {
-        // Buat tab session baru untuk tab ini
         create_tab_session($new_tsid, $data['id_user'], $data['username'], $data['role']);
 
-        // Set tsid global agar tab_redirect() bisa pakai
         global $tsid;
         $tsid = $new_tsid;
 
@@ -73,13 +64,14 @@ if (isset($_POST['login'])) {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Login — B-ORG System</title>
 
+  <!-- LINK CSS -->
   <link rel="stylesheet" href="assets/css/login.css">
 </head>
 <body>
 
 <div class="split-container">
 
-  <!-- LEFT SIDE -->
+  <!-- LEFT -->
   <div class="left-panel">
 
     <div class="status-badge">
@@ -101,9 +93,7 @@ if (isset($_POST['login'])) {
         setiap data,<br>
         <span class="highlight">tercatat rapi.</span>
       </h1>
-      <p>
-        Pantau data organisasi secara real-time, cepat dan akurat.
-      </p>
+      <p>Pantau data organisasi secara real-time, cepat dan akurat.</p>
     </div>
 
     <div class="stats">
@@ -127,7 +117,7 @@ if (isset($_POST['login'])) {
 
   </div>
 
-  <!-- RIGHT SIDE -->
+  <!-- RIGHT -->
   <div class="right-panel">
 
     <div class="card">
@@ -148,13 +138,13 @@ if (isset($_POST['login'])) {
 
           <div class="form-group">
             <label>Username</label>
-            <input type="text" name="username" placeholder="Masukkan username" required autofocus
-                  value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
+            <input type="text" name="username" required
+              value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
           </div>
 
           <div class="form-group">
             <label>Password</label>
-            <input type="password" name="password" placeholder="Masukkan password" required>
+            <input type="password" name="password" required>
           </div>
 
           <button type="submit" name="login" class="btn-submit" id="btnLogin">
@@ -174,16 +164,14 @@ if (isset($_POST['login'])) {
 </div>
 
 <script>
-// Generate tsid unik untuk tab ini sebelum form submit
 function generateTsid() {
     const arr = new Uint8Array(16);
     crypto.getRandomValues(arr);
     return Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-document.getElementById('loginForm').addEventListener('submit', function(e) {
-    let tsid = sessionStorage.getItem('b_org_tsid') || generateTsid();
-    tsid = generateTsid();
+document.getElementById('loginForm').addEventListener('submit', function() {
+    let tsid = generateTsid();
     sessionStorage.setItem('b_org_tsid', tsid);
     document.getElementById('newTsid').value = tsid;
 
