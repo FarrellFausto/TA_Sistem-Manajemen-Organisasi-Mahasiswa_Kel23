@@ -1,0 +1,128 @@
+body {
+  margin: 0;
+  background: #f0f3f8;
+}
+.main {
+  max-width: 640px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+.card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, .08);
+}
+.card-header {
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  padding: 24px 30px;
+  color: white;
+}
+.card-header h2 {
+  margin: 0 0 4px;
+  font-size: 1.3rem;
+}
+.card-header p {
+  margin: 0;
+  opacity: .8;
+  font-size: .85rem;
+}
+.card-body {
+  padding: 30px;
+}
+.sec {
+  font-size: .74rem;
+  font-weight: 700;
+  color: #27ae60;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 20px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #eafaf1;
+}
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.fg {
+  margin-bottom: 14px;
+}
+label {
+  display: block;
+  font-size: .82rem;
+  font-weight: 600;
+  color: #5f6368;
+  margin-bottom: 5px;
+}
+.req {
+  color: #e74c3c;
+}
+input,
+select {
+  width: 100%;
+  padding: 11px 14px;
+  border: 2px solid #e8eaed;
+  border-radius: 9px;
+  font-size: .9rem;
+  transition: .3s;
+  color: #2c3e50;
+  background: #fafafa;
+  -webkit-appearance: none;
+}
+input:focus,
+select:focus {
+  outline: none;
+  border-color: #27ae60;
+  background: white;
+}
+.errors {
+  background: #fdf0f0;
+  border: 1px solid #f5c6cb;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  font-size: .85rem;
+  color: #c0392b;
+}
+.errors ul {
+  margin: 6px 0 0 16px;
+}
+.errors li {
+  margin-bottom: 3px;
+}
+.btn-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 22px;
+}
+.btn {
+  padding: 12px 22px;
+  border-radius: 9px;
+  font-weight: 700;
+  font-size: .9rem;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  transition: .3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-green {
+  background: #27ae60;
+  color: white;
+  flex: 1;
+  justify-content: center;
+}
+.btn-green:hover {
+  background: #229954;
+}
+.btn-outline {
+  background: white;
+  color: #7f8c8d;
+  border: 2px solid #e8eaed;
+}
+.btn-outline:hover {
+  border-color: #bdc3c7;
+}
