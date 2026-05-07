@@ -23,6 +23,11 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Mencegah caching agar tombol 'Back' tidak bisa menampilkan data lama atau halaman login setelah login/logout
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
 // Ambil tsid dari request (GET lebih prioritas dari POST untuk navigasi)
 $tsid = trim($_GET['tsid'] ?? $_POST['tsid'] ?? '');
 

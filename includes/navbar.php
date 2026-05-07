@@ -135,6 +135,15 @@ function nurl($path) {
     // MutationObserver: tangkap link/form yang di-render dinamis (misal JS)
     const obs = new MutationObserver(() => { injectLinks(); injectForms(); });
     obs.observe(document.body, { childList: true, subtree: true });
+
+    // 4. Mencegah navigasi via tombol Back browser secara agresif
+    // Menghapus jejak history sebelumnya dengan replaceState, lalu kunci dengan pushState
+    history.replaceState(null, null, window.location.href);
+    history.pushState(null, null, window.location.href);
+    
+    window.onpopstate = function() {
+        history.pushState(null, null, window.location.href);
+    };
 })();
 
 // ============================================================

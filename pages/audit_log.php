@@ -35,10 +35,10 @@ $stmt->execute();
 $logs = $stmt->get_result();
 $stmt->close();
 
-$all_admins  = mysqli_query($conn, "SELECT id_user, username FROM users WHERE role='admin' ORDER BY username");
+$all_admins  = mysqli_query($conn, "SELECT u.id_user, u.username FROM users u LEFT JOIN anggota a ON u.id_anggota = a.id_anggota WHERE u.role='admin' AND (a.deleted_at IS NULL OR u.id_anggota IS NULL) ORDER BY u.username");
 $total_log   = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM log_aktivitas"))[0];
 $total_hari  = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM log_aktivitas WHERE DATE(waktu) = CURDATE()"))[0];
-$total_admin_aktif = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(DISTINCT id_user) FROM log_aktivitas WHERE id_user IS NOT NULL"))[0];
+$total_admin_aktif = mysqli_fetch_row(mysqli_query($conn, "SELECT COUNT(*) FROM users u LEFT JOIN anggota a ON u.id_anggota = a.id_anggota WHERE u.role='admin' AND (a.deleted_at IS NULL OR u.id_anggota IS NULL)"))[0];
 ?>
 <!DOCTYPE html>
 <html lang="id">
