@@ -7,6 +7,7 @@ Sistem ini dirancang untuk mengelola data anggota, periode kepengurusan, dan log
 ##  Tim Pengembang
 * **Bambang irawan** - PM GALAK
 * **Farrell Fausto** - Documentation & Git Manager
+<<<<<<< HEAD
 * **Anisa Anastasya** - Database Engineer
 * **Rhea Alya K** - Database Engineer
 * **Rabelva Evan Ligar** - Backend Developer
@@ -14,6 +15,11 @@ Sistem ini dirancang untuk mengelola data anggota, periode kepengurusan, dan log
 * [Nama teman] - Backend Developer
 * **Mirah** - Frontend Developer
 * **Aufan** - Frontend Developer
+=======
+* [Nama Teman] - Database Engineer
+* [Nama Teman] - Backend Developer
+* [Nama Teman] - Frontend Developer
+>>>>>>> bismillah-acc
 
 ## 🛠️ Tech Stack
 * **Language:** PHP Native
@@ -30,6 +36,7 @@ Sistem ini dirancang untuk mengelola data anggota, periode kepengurusan, dan log
 1. **Dilarang keras** melakukan push langsung ke branch `main`.
 2. Buat branch baru untuk setiap fitur: `feat-namafitur` atau `fix-namafitur`.
 3. Setelah selesai, buka **Pull Request** dan tunggu review dari Git Manager.
+<<<<<<< HEAD
 
 🛠 Panduan Standardisasi Branch (Internal Audit)
 
@@ -75,3 +82,5 @@ Setelah kalian `git push`, buka GitHub dan klik tombol **"Compare & pull request
 *   **Tag Auditor**: Mention gua di deskripsi biar gua cek kodingannya.
 *   **Tunggu Review**: Jangan di-*merge* sendiri. Tunggu persetujuan (Approve) dari gua sebagai **IT Auditor**.
 
+=======
+>>>>>>> bismillah-acc
