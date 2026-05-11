@@ -5,21 +5,16 @@
 Sistem ini dirancang untuk mengelola data anggota, periode kepengurusan, dan log aktivitas organisasi secara efisien.
 
 ##  Tim Pengembang
-* **Bambang irawan** - PM GALAK
-* **Farrell Fausto** - Documentation & Git Manager
-<<<<<<< HEAD
+* **Bambang irawan** - PM 
+* **Farrell Fausto** - Git Manager
 * **Anisa Anastasya** - Database Engineer
 * **Rhea Alya K** - Database Engineer
 * **Rabelva Evan Ligar** - Backend Developer
-* **Jedan** - Backend Developer
-* [Nama teman] - Backend Developer
-* **Mirah** - Frontend Developer
-* **Aufan** - Frontend Developer
-=======
-* [Nama Teman] - Database Engineer
-* [Nama Teman] - Backend Developer
-* [Nama Teman] - Frontend Developer
->>>>>>> bismillah-acc
+* **Ahmad Zaydan Iswandi** - Backend Developer
+* **Satria Ramadhan Aulia Rivanka** - Backend Developer
+* **Amirah Rahmah Wijayanti** - Frontend Developer
+* **Aufan Damays Marsuki** - Frontend Developer
+
 
 ## 🛠️ Tech Stack
 * **Language:** PHP Native
